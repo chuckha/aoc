@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,6 +31,7 @@ func NewSessionToken(token string) (SessionToken, error) {
 	if token == "" {
 		return "", errors.New("token cannot be empty")
 	}
+	token = strings.TrimSpace(token)
 	return SessionToken(token), nil
 }
 
