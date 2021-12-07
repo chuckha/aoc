@@ -6,6 +6,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Answer struct {
+	Level  int    `json:"level"`
+	Answer string `json:"answer"`
+}
+
+func NewAnswer(level int, answer string) (*Answer, error) {
+	if level > 2 {
+		return nil, errors.New("undefined level greater than 2")
+	}
+	if answer == "" {
+		return nil, errors.New("very unlikely the answer is an empty string")
+	}
+	return &Answer{
+		Level:  level,
+		Answer: answer,
+	}, nil
+}
+
 type SessionToken string
 
 func NewSessionToken(token string) (SessionToken, error) {
@@ -31,17 +49,12 @@ func NewExample(input []byte, answer string) (*Example, error) {
 }
 
 type Input struct {
-	Level    int
 	Examples []Example
 	Input    []byte
 }
 
-func NewInput(level int, input []byte, examples []Example) (*Input, error) {
-	if level != 1 && level != 2 {
-		return nil, errors.New("only level 1 and 2 are valid")
-	}
+func NewInput(input []byte, examples []Example) (*Input, error) {
 	return &Input{
-		Level:    level,
 		Examples: examples,
 		Input:    input,
 	}, nil
@@ -51,10 +64,10 @@ type Question struct {
 	Year        int
 	Day         int
 	RawQuestion []byte
-	Inputs      []*Input
+	Input       *Input
 }
 
-func NewQuestion(year, day int, raw []byte, inputs []*Input) (*Question, error) {
+func NewQuestion(year, day int, raw []byte, input *Input) (*Question, error) {
 	if year < 2015 || year > time.Now().Year() {
 		return nil, errors.New("year is invalid")
 	}
@@ -68,6 +81,6 @@ func NewQuestion(year, day int, raw []byte, inputs []*Input) (*Question, error) 
 		Year:        year,
 		Day:         day,
 		RawQuestion: raw,
-		Inputs:      inputs,
+		Input:       input,
 	}, nil
 }
