@@ -7,14 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/chuckha/aoc/app"
 	"github.com/chuckha/aoc/internal/core/services/advent"
-	"github.com/chuckha/aoc/internal/infrastructure/diskcache"
-	"github.com/chuckha/aoc/internal/infrastructure/serde/json"
-	"github.com/chuckha/aoc/internal/infrastructure/web"
 	"github.com/mitchellh/go-wordwrap"
 	"jaytaylor.com/html2text"
 )
@@ -32,20 +29,11 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	home := os.Getenv("HOME")
-	dir := filepath.Join(home, ".aoc")
-	tkn, err := os.ReadFile(dir + "/token")
-	if err != nil {
-		panic(err)
-	}
 
-	serde := json.NewSerDe()
-	qc := diskcache.NewQuestionsCache(dir, serde)
-	qf, err := web.NewAdvent(string(tkn), serde, &web.ResponseInterpreter{})
+	aoc, err := app.NewApplication()
 	if err != nil {
 		panic(fmt.Sprintf("%+v", err))
 	}
-	svc := advent.NewService(qc, qf)
 
 	if *submit {
 		scanner := bufio.NewScanner(os.Stdin)
@@ -57,7 +45,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		}
 
-		resp, err := svc.SubmitAnswer(ctx, *year, *day, *level, answer)
+		resp, err := aoc.Service.SubmitAnswer(ctx, *year, *day, *level, answer)
 		if err != nil {
 			panic(fmt.Sprintf("%+v", err))
 		}
@@ -71,7 +59,7 @@ func main() {
 	}
 
 	if *desc {
-		desc, err := svc.GetDescription(ctx, &advent.GetDescriptionInput{Year: *year, Day: *day, Force: true})
+		desc, err := aoc.Service.GetDescription(ctx, &advent.GetDescriptionInput{Year: *year, Day: *day, Force: true})
 		if err != nil {
 			panic(fmt.Sprintf("%+v", err))
 		}
@@ -87,7 +75,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	input, err := svc.GetInput(ctx, *year, *day)
+	input, err := aoc.GetInput(ctx, *year, *day)
 	if err != nil {
 		panic(fmt.Sprintf("%+v", err))
 	}
