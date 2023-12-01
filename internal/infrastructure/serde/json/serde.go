@@ -3,7 +3,7 @@ package json
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
+	"gitlab.com/tozd/go/errors"
 )
 
 type SerDe struct{}

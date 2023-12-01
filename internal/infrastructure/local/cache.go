@@ -1,13 +1,13 @@
-package diskcache
+package local
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/chuckha/aoc/internal/core/domain"
-	"github.com/pkg/errors"
+	"gitlab.com/tozd/go/errors"
 )
 
 type serde interface {
@@ -15,19 +15,25 @@ type serde interface {
 	Deserialize([]byte, interface{}) error
 }
 
-type QuestionsCache struct {
-	Directory string
-	SerDe     serde
+type questionGetter interface {
+	Get(ctx context.Context, year, day int) (*domain.Question, error)
 }
 
-func NewQuestionsCache(dir string, serde serde) *QuestionsCache {
-	return &QuestionsCache{
+type Cache struct {
+	Directory string
+	SerDe     serde
+	qg        questionGetter
+}
+
+func NewCache(dir string, serde serde, qg questionGetter) *Cache {
+	return &Cache{
 		Directory: dir,
 		SerDe:     serde,
+		qg:        qg,
 	}
 }
 
-func (q *QuestionsCache) Insert(question *domain.Question) error {
+func (q *Cache) insert(question *domain.Question) error {
 	dir := filepath.Join(q.Directory, toPath(question.Year, question.Day))
 	if err := os.MkdirAll(dir, os.ModeDir|0o700); err != nil {
 		return errors.WithStack(err)
@@ -44,16 +50,24 @@ func (q *QuestionsCache) Insert(question *domain.Question) error {
 	return nil
 }
 
-func (q *QuestionsCache) Get(year, day int) (*domain.Question, error) {
+func (q *Cache) Get(ctx context.Context, year, day int) (*domain.Question, error) {
+	// look in the cache first, if it's a hit, return, if it's a miss go get it
 	file := filepath.Join(q.Directory, toPath(year, day), "data")
 	_, err := os.Stat(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
+			question, err := q.qg.Get(ctx, year, day)
+			if err != nil {
+				return nil, err
+			}
+			if err := q.insert(question); err != nil {
+				return nil, err
+			}
+			return question, nil
 		}
 		return nil, errors.WithStack(err)
 	}
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -62,6 +76,14 @@ func (q *QuestionsCache) Get(year, day int) (*domain.Question, error) {
 		return nil, err
 	}
 	return question, nil
+}
+
+func (q *Cache) Delete(year, day int) error {
+	dir := filepath.Join(q.Directory, toPath(year, day))
+	if err := os.RemoveAll(dir); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 func toPath(year, day int) string {

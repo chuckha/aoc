@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/chuckha/aoc/internal/core/domain"
-	"github.com/pkg/errors"
+	"gitlab.com/tozd/go/errors"
 )
 
 type serializer interface {
@@ -39,6 +39,9 @@ func NewAdvent(token string, serializer serializer, ri responseInterpreter) (*Ad
 		ResponseInterpreter: ri,
 	}, nil
 }
+
+// TODO: use this line to figure out if the user is not logged in
+// Puzzle inputs differ by user.  Please log in to get your puzzle input.
 
 func (a *Advent) Get(ctx context.Context, year, day int) (*domain.Question, error) {
 	link, err := url.Parse(fmt.Sprintf("https://adventofcode.com/%d/day/%d", year, day))
@@ -82,7 +85,7 @@ func (a *Advent) Submit(ctx context.Context, year, day int, answer *domain.Answe
 		"answer": []string{answer.Answer},
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Body = ioutil.NopCloser(strings.NewReader(form.Encode()))
+	req.Body = io.NopCloser(strings.NewReader(form.Encode()))
 	resp, err := doRequest(req)
 	if err != nil {
 		return nil, err
@@ -112,7 +115,7 @@ func doRequest(req *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -128,5 +131,6 @@ func (a *Advent) newReq(method string, link string) (*http.Request, error) {
 		Name:  "session",
 		Value: string(a.Token),
 	})
+	fmt.Println("debug", req)
 	return req, nil
 }
